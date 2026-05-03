@@ -16,17 +16,8 @@ final class AFWP_Plugin
     public function init(): void
     {
         $this->settings->hooks();
-        add_action('rest_api_init', [$this, 'register_rest']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_widget']);
         add_shortcode('agency_feedback_widget', [$this, 'shortcode_widget']);
-    }
-
-    public function register_rest(): void
-    {
-        $cfg = AFWP_Settings::get();
-        $client = new AFWP_Supabase($cfg);
-        $rest = new AFWP_Rest($client);
-        $rest->register_routes();
     }
 
     public function enqueue_widget(): void
@@ -35,7 +26,7 @@ final class AFWP_Plugin
         if (empty($cfg['enabled'])) {
             return;
         }
-        if (!$this->has_required_frontend_config($cfg)) {
+        if (empty($cfg['embed_public_key'])) {
             return;
         }
         wp_register_script(
@@ -55,25 +46,20 @@ final class AFWP_Plugin
         return '';
     }
 
-    private function has_required_frontend_config(array $cfg): bool
-    {
-        return !empty($cfg['project_slug']) && !empty($cfg['embed_public_key']);
-    }
-
     public function inject_script_attributes(string $tag, string $handle, string $src): string
     {
         if ($handle !== 'agency-feedback-widget') {
             return $tag;
         }
-        $cfg = AFWP_Settings::get();
-        $apiBase = untrailingslashit(rest_url('agency-feedback/v1'));
-        $attrs = sprintf(
-            ' src="%s" data-project="%s" data-key="%s" data-api="%s" defer',
+        $cfg    = AFWP_Settings::get();
+        $apiUrl = untrailingslashit(AFWP_Settings::API_BASE) . '/api/feedback';
+        $attrs  = sprintf(
+            ' src="%s" data-key="%s" data-api="%s" defer',
             esc_url($src),
-            esc_attr((string)$cfg['project_slug']),
             esc_attr((string)$cfg['embed_public_key']),
-            esc_attr($apiBase)
+            esc_attr($apiUrl)
         );
         return '<script' . $attrs . '></script>';
     }
 }
+

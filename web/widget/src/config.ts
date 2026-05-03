@@ -5,29 +5,24 @@ function trimSlash(s: string): string {
 }
 
 export function readConfig(script: HTMLScriptElement): WidgetConfig | null {
-  const projectSlug =
-    script.getAttribute("data-af-project")?.trim() ||
-    script.getAttribute("data-project")?.trim() ||
-    "";
   const apiRaw =
     script.getAttribute("data-af-api")?.trim() ||
     script.getAttribute("data-api")?.trim() ||
     "";
-  const embedPublicKey =
+  const embedKey =
     script.getAttribute("data-af-key")?.trim() ||
     script.getAttribute("data-key")?.trim() ||
     "";
 
-  if (!projectSlug || !apiRaw || !embedPublicKey) {
+  if (!apiRaw || !embedKey) {
     console.error(
-      "[AgencyFeedback] Missing data-project, data-api, or data-key on script tag.",
+      "[AgencyFeedback] Missing data-api or data-key on script tag.",
     );
     return null;
   }
 
   return {
     apiBase: trimSlash(apiRaw),
-    projectSlug,
-    embedPublicKey,
+    embedKey,
   };
 }

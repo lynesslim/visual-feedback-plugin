@@ -16,12 +16,11 @@ export async function fetchFeedback(
   cfg: WidgetConfig,
 ): Promise<FeedbackRow[]> {
   const q = new URLSearchParams({
-    projectSlug: cfg.projectSlug,
-    embedPublicKey: cfg.embedPublicKey,
-    urlPath: urlPath(),
-    includeResolved: "1",
+    embed_key: cfg.embedKey,
+    url_path: urlPath(),
+    include_resolved: "1",
   });
-  const res = await fetch(`${cfg.apiBase}/api/public/feedback?${q}`, {
+  const res = await fetch(`${cfg.apiBase}?${q}`, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
@@ -37,14 +36,10 @@ export async function fetchFeedbackDetail(
   cfg: WidgetConfig,
   feedbackId: string,
 ): Promise<{ feedback: FeedbackRow; comments: CommentRow[] } | null> {
-  const q = new URLSearchParams({
-    projectSlug: cfg.projectSlug,
-    embedPublicKey: cfg.embedPublicKey,
+  const q = new URLSearchParams({ embed_key: cfg.embedKey });
+  const res = await fetch(`${cfg.apiBase}/${feedbackId}?${q}`, {
+    headers: { Accept: "application/json" },
   });
-  const res = await fetch(
-    `${cfg.apiBase}/api/public/feedback/${feedbackId}?${q}`,
-    { headers: { Accept: "application/json" } },
-  );
   if (!res.ok) return null;
   const data = (await res.json()) as {
     feedback?: FeedbackRow;
@@ -66,19 +61,18 @@ export async function submitFeedback(
     metadata: Record<string, unknown>;
   },
 ): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${cfg.apiBase}/api/public/feedback`, {
+  const res = await fetch(cfg.apiBase, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      projectSlug: cfg.projectSlug,
-      embedPublicKey: cfg.embedPublicKey,
+      embed_key: cfg.embedKey,
       selector: payload.selector,
       coordinates: payload.coordinates,
-      commentText: payload.commentText,
-      imageUrls: payload.imageUrls,
+      comment_text: payload.commentText,
+      image_urls: payload.imageUrls,
       author: payload.author,
       priority: payload.priority,
-      urlPath: urlPath(),
+      url_path: urlPath(),
       metadata: payload.metadata,
     }),
   });
@@ -102,20 +96,16 @@ export async function postThreadComment(
   body: string,
   imageUrls: string[],
 ): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(
-    `${cfg.apiBase}/api/public/feedback/${feedbackId}/comments`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projectSlug: cfg.projectSlug,
-        embedPublicKey: cfg.embedPublicKey,
-        authorType,
-        body,
-        imageUrls,
-      }),
-    },
-  );
+  const res = await fetch(`${cfg.apiBase}/${feedbackId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      embed_key: cfg.embedKey,
+      author_type: authorType,
+      body,
+      image_urls: imageUrls,
+    }),
+  });
   if (!res.ok) {
     let msg = "Could not post comment";
     try {
@@ -134,10 +124,9 @@ export async function uploadFeedbackImage(
   file: File,
 ): Promise<{ ok: boolean; url?: string; error?: string }> {
   const form = new FormData();
-  form.set("projectSlug", cfg.projectSlug);
-  form.set("embedPublicKey", cfg.embedPublicKey);
+  form.set("embed_key", cfg.embedKey);
   form.set("file", file);
-  const res = await fetch(`${cfg.apiBase}/api/public/feedback/upload`, {
+  const res = await fetch(`${cfg.apiBase}/upload`, {
     method: "POST",
     body: form,
   });
@@ -162,43 +151,16 @@ export async function markFeedbackResolved(
   cfg: WidgetConfig,
   feedbackId: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${cfg.apiBase}/api/public/feedback/${feedbackId}`, {
+  const res = await fetch(`${cfg.apiBase}/${feedbackId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      projectSlug: cfg.projectSlug,
-      embedPublicKey: cfg.embedPublicKey,
+      embed_key: cfg.embedKey,
       status: "resolved",
     }),
   });
   if (!res.ok) {
     let msg = "Could not update";
-    try {
-      const j = (await res.json()) as { error?: string };
-      if (j.error) msg = j.error;
-    } catch {
-      /* ignore */
-    }
-    return { ok: false, error: msg };
-  }
-  return { ok: true };
-}
-
-export async function verifyFeedbackPasscode(
-  cfg: WidgetConfig,
-  passcode: string,
-): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${cfg.apiBase}/api/public/feedback/verify-pin`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      projectSlug: cfg.projectSlug,
-      embedPublicKey: cfg.embedPublicKey,
-      passcode,
-    }),
-  });
-  if (!res.ok) {
-    let msg = "Invalid code";
     try {
       const j = (await res.json()) as { error?: string };
       if (j.error) msg = j.error;

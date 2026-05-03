@@ -26,6 +26,5 @@ export type CommentRow = {
 
 export type WidgetConfig = {
   apiBase: string;
-  projectSlug: string;
-  embedPublicKey: string;
+  embedKey: string; // Single embed key — no project slug needed.
 };
