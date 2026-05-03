@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Scan widget sources for class names */
+@source "./src/**/*.ts";
+
+@layer base {
+  :host,
+  :host * {
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+      "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
