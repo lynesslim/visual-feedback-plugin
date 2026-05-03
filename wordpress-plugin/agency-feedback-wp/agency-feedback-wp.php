@@ -17,7 +17,13 @@ define('AFWP_DIR', plugin_dir_path(__FILE__));
 define('AFWP_URL', plugin_dir_url(__FILE__));
 
 require_once AFWP_DIR . 'includes/class-afwp-settings.php';
+require_once AFWP_DIR . 'includes/class-afwp-updater.php';
 require_once AFWP_DIR . 'includes/class-afwp-plugin.php';
+
+// Boot the GitHub auto-updater as early as possible.
+add_action('init', static function (): void {
+    (new AFWP_Updater())->hooks();
+});
 
 function afwp_bootstrap(): void
 {
