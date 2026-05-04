@@ -54,13 +54,21 @@ final class AFWP_Settings
             );
         } else {
             add_menu_page(
-                'Visual Feedback',
+                'Supercraft',
                 'Supercraft',
                 'manage_options',
-                'agency-feedback',
-                [$this, 'render_page'],
+                'supercraft-dashboard',
+                [$this, 'render_dashboard'],
                 'dashicons-superhero',
                 3
+            );
+            add_submenu_page(
+                'supercraft-dashboard',
+                'Visual Feedback',
+                'Visual Feedback',
+                'manage_options',
+                'agency-feedback',
+                [$this, 'render_page']
             );
         }
     }
@@ -107,6 +115,12 @@ final class AFWP_Settings
         }
 
         return $next;
+    }
+
+    public function render_dashboard(): void
+    {
+        wp_redirect(admin_url('admin.php?page=agency-feedback'));
+        exit;
     }
 
     public function render_page(): void
