@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Agency Feedback WP
  * Description: Visual feedback widget powered by Supercraft.
- * Version: 0.5.1
+ * Version: 0.5.2
  * Author: Supercraft
  * Requires PHP: 8.0
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AFWP_VERSION', '0.5.1');
+define('AFWP_VERSION', '0.5.2');
 define('AFWP_FILE', __FILE__);
 define('AFWP_DIR', plugin_dir_path(__FILE__));
 define('AFWP_URL', plugin_dir_url(__FILE__));
