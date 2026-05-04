@@ -17,6 +17,9 @@ class PluginUpdateChecker {
         $this->branch = $branch;
         $this->cacheKey = 'puc_' . md5($this->githubRepo);
 
+        delete_transient('afwp_github_tag');
+        delete_transient('afwp_github_release');
+
         add_filter('pre_set_site_transient_update_plugins', [$this, 'checkForUpdate']);
         add_filter('plugins_api', [$this, 'pluginInfo'], 20, 3);
         add_filter('upgrader_source_selection', [$this, 'fixSourceFolder'], 10, 4);
