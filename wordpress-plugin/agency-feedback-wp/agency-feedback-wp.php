@@ -23,8 +23,12 @@ $githubUpdater = YahnisElsts\PluginUpdateChecker\v5p6\PucFactory::buildUpdateChe
     'agency-feedback-wp'
 );
 
-$githubUpdater->setBranch('main');
-$githubUpdater->getVcs()->setReleaseAssetSupport(true, 'agency-feedback-wp.zip');
+add_filter('puc_request_package_result', function($result, $url, $args) {
+    if (isset($result->download_link)) {
+        $result->download_link = str_replace('zipball', 'archive', $result->download_link) . '.zip';
+    }
+    return $result;
+}, 10, 3);
 
 add_filter('upgrader_source_selection', function($source, $remoteSource, $upgrader, $hookExtra) {
     if (!isset($hookExtra['plugin']) || $hookExtra['plugin'] !== 'agency-feedback-wp/agency-feedback-wp.php') {
