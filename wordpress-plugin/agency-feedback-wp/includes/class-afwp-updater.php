@@ -52,7 +52,7 @@ final class AFWP_Updater
                 'plugin'      => self::PLUGIN_SLUG,
                 'new_version' => $latest_version,
                 'url'         => 'https://github.com/' . self::GITHUB_REPO,
-                'package'     => 'https://api.github.com/repos/' . self::GITHUB_REPO . '/zipball/' . ($tag['name'] ?? ''),
+                'package'     => 'https://github.com/' . self::GITHUB_REPO . '/archive/refs/tags/' . ($tag['name'] ?? '') . '.zip',
                 'icons'       => [],
                 'banners'     => [],
                 'tested'      => '6.8',
@@ -90,7 +90,7 @@ final class AFWP_Updater
             'homepage'      => 'https://github.com/' . self::GITHUB_REPO,
             'requires_php'  => '8.0',
             'tested'        => '6.8',
-            'download_link' => 'https://api.github.com/repos/' . self::GITHUB_REPO . '/zipball/' . ($tag['name'] ?? ''),
+            'download_link' => 'https://github.com/' . self::GITHUB_REPO . '/archive/refs/tags/' . ($tag['name'] ?? '') . '.zip',
             'sections'      => [
                 'description' => 'Visual feedback widget powered by Supercraft.',
                 'changelog'   => 'See GitHub for release notes.',
@@ -116,13 +116,24 @@ final class AFWP_Updater
         }
 
         global $wp_filesystem;
-        $correct = trailingslashit($remote_source) . 'agency-feedback-wp/';
 
-        if ($source !== $correct) {
-            $wp_filesystem->move($source, $correct);
+        $target = trailingslashit($remote_source) . 'agency-feedback-wp/';
+        $source_files = $wp_filesystem->dirlist($source);
+
+        if (!empty($source_files) && isset($source_files['wordpress-plugin'])) {
+            $inner = trailingslashit($source) . 'wordpress-plugin/agency-feedback-wp/';
+            if ($wp_filesystem->exists($inner)) {
+                $wp_filesystem->move($inner, $target);
+                $wp_filesystem->delete($source);
+                return $target;
+            }
         }
 
-        return $correct;
+        if ($source !== $target && $wp_filesystem->exists($source)) {
+            $wp_filesystem->move($source, $target);
+        }
+
+        return $target;
     }
 
     // -------------------------------------------------------------------------
