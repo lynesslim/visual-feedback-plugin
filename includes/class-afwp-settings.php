@@ -43,8 +43,8 @@ final class AFWP_Settings
             }
         }
 
-        if ($supercraft_exists) {
-add_submenu_page(
+if ($supercraft_exists) {
+            add_submenu_page(
                 'supercraft',
                 'Visual Feedback',
                 'Visual Feedback',
@@ -52,8 +52,27 @@ add_submenu_page(
                 'agency-feedback',
                 [$this, 'render_page']
             );
-
-            remove_submenu_page('supercraft', 'supercraft');
+        } else {
+            add_menu_page(
+                'Supercraft',
+                'Supercraft',
+                'manage_options',
+                'supercraft',
+                '__return_empty_string',
+                'dashicons-superhero',
+                3
+            );
+            add_submenu_page(
+                'supercraft',
+                'Visual Feedback',
+                'Visual Feedback',
+                'manage_options',
+                'agency-feedback',
+                [$this, 'render_page']
+            );
+            add_action('admin_menu', function() {
+                remove_submenu_page('supercraft', 'supercraft');
+            }, 999);
         }
     }
 
