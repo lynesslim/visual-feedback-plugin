@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Agency Feedback WP
  * Description: Visual feedback widget powered by Supercraft.
- * Version: 0.3.9
+ * Version: 0.4.3
  * Author: Supercraft
  * Requires PHP: 8.0
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AFWP_VERSION', '0.3.9');
+define('AFWP_VERSION', '0.4.3');
 define('AFWP_FILE', __FILE__);
 define('AFWP_DIR', plugin_dir_path(__FILE__));
 define('AFWP_URL', plugin_dir_url(__FILE__));
@@ -23,42 +23,6 @@ $githubUpdater = YahnisElsts\PluginUpdateChecker\v5p6\PucFactory::buildUpdateChe
     'agency-feedback-wp'
 );
 
-add_filter('puc_request_package_result', function($result, $url, $args) {
-    if (isset($result->download_link)) {
-        $result->download_link = str_replace('zipball', 'archive', $result->download_link) . '.zip';
-    }
-    return $result;
-}, 10, 3);
-
-add_filter('upgrader_source_selection', function($source, $remoteSource, $upgrader, $hookExtra) {
-    if (!isset($hookExtra['plugin']) || $hookExtra['plugin'] !== 'agency-feedback-wp/agency-feedback-wp.php') {
-        return $source;
-    }
-    global $wp_filesystem;
-    $target = trailingslashit($remoteSource) . 'agency-feedback-wp/';
-    if (is_dir(trailingslashit($source) . 'wordpress-plugin')) {
-        $wp_filesystem->move(
-            trailingslashit($source) . 'wordpress-plugin/agency-feedback-wp',
-            $target
-        );
-        $wp_filesystem->delete($source);
-        return $target;
-    }
-    if ($source !== $target) {
-        $wp_filesystem->move($source, $target);
-    }
-    return $target;
-}, 10, 4);
-
-// Optional: Set the branch that contains the stable release.
-// $myUpdateChecker->setBranch('main');
-
-/**
- * Fix for GitHub repository subdirectory structure.
- *
- * When downloading from GitHub, the plugin is located in a subfolder.
- * This filter renames the extracted directory so WordPress can find the plugin files.
- */
 add_filter('upgrader_source_selection', function($source, $remote_source, $upgrader, $hook_extra) {
 	if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== 'agency-feedback-wp/agency-feedback-wp.php') {
 		return $source;
@@ -67,7 +31,6 @@ add_filter('upgrader_source_selection', function($source, $remote_source, $upgra
 	global $wp_filesystem;
 	$target = trailingslashit($remote_source) . 'agency-feedback-wp/';
 
-	// If the repo has a 'wordpress-plugin' folder, move the inner plugin folder out.
 	$sub_path = trailingslashit($source) . 'wordpress-plugin/agency-feedback-wp';
 	if ($wp_filesystem->exists($sub_path)) {
 		$wp_filesystem->move($sub_path, $target);
