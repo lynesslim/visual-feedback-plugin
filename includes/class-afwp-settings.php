@@ -54,21 +54,13 @@ final class AFWP_Settings
             );
         } else {
             add_menu_page(
-                'Supercraft',
-                'Supercraft',
-                'manage_options',
-                'supercraft',
-                null,
-                'dashicons-superhero',
-                3
-            );
-            add_submenu_page(
-                'supercraft',
                 'Visual Feedback',
-                'Visual Feedback',
+                'Supercraft',
                 'manage_options',
                 'agency-feedback',
-                [$this, 'render_page']
+                [$this, 'render_page'],
+                'dashicons-superhero',
+                3
             );
         }
     }
