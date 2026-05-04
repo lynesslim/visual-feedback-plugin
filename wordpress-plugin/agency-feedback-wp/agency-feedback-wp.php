@@ -22,6 +22,8 @@ $githubUpdater = YahnisElsts\PluginUpdateChecker\v5p6\PucFactory::buildUpdateChe
     __FILE__,
     'agency-feedback-wp'
 );
+$githubUpdater->setBranch('main');
+$githubUpdater->setDirectory('wordpress-plugin/agency-feedback-wp');
 
 add_filter('upgrader_source_selection', function($source, $remote_source, $upgrader, $hook_extra) {
 	if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== 'agency-feedback-wp/agency-feedback-wp.php') {
