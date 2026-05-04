@@ -118,18 +118,11 @@ final class AFWP_Updater
         global $wp_filesystem;
 
         $target = trailingslashit($remote_source) . 'agency-feedback-wp/';
-        $source_files = $wp_filesystem->dirlist($source);
 
-        if (!empty($source_files) && isset($source_files['wordpress-plugin'])) {
-            $inner = trailingslashit($source) . 'wordpress-plugin/agency-feedback-wp/';
-            if ($wp_filesystem->exists($inner)) {
-                $wp_filesystem->move($inner, $target);
-                $wp_filesystem->delete($source);
-                return $target;
-            }
-        }
-
-        if ($source !== $target && $wp_filesystem->exists($source)) {
+        if ($wp_filesystem->exists(trailingslashit($source) . 'wordpress-plugin')) {
+            $wp_filesystem->move(trailingslashit($source) . 'wordpress-plugin/agency-feedback-wp', $target);
+            $wp_filesystem->delete($source);
+        } elseif ($source !== $target) {
             $wp_filesystem->move($source, $target);
         }
 
