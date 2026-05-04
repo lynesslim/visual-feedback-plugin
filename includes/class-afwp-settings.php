@@ -33,13 +33,44 @@ final class AFWP_Settings
 
     public function register_menu(): void
     {
-        add_options_page(
-            'Agency Feedback',
-            'Agency Feedback',
-            'manage_options',
-            'agency-feedback',
-            [$this, 'render_page']
-        );
+        global $menu;
+
+        $supercraft_exists = false;
+        foreach ($menu as $item) {
+            if (isset($item[0]) && strpos($item[0], 'Supercraft') !== false) {
+                $supercraft_exists = true;
+                break;
+            }
+        }
+
+        if ($supercraft_exists) {
+            add_submenu_page(
+                'supercraft',
+                'Visual Feedback',
+                'Visual Feedback',
+                'manage_options',
+                'agency-feedback',
+                [$this, 'render_page']
+            );
+        } else {
+            add_menu_page(
+                'Supercraft',
+                'Supercraft',
+                'manage_options',
+                'supercraft',
+                null,
+                'dashicons-superhero',
+                3
+            );
+            add_submenu_page(
+                'supercraft',
+                'Visual Feedback',
+                'Visual Feedback',
+                'manage_options',
+                'agency-feedback',
+                [$this, 'render_page']
+            );
+        }
     }
 
     public function register_settings(): void
