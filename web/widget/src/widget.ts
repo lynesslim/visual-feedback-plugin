@@ -1,5 +1,6 @@
 import {
   fetchFeedback,
+  fetchFeedbackComments,
   fetchFeedbackDetail,
   markFeedbackResolved,
   postThreadComment,
@@ -509,24 +510,21 @@ export function mountWidget(script: HTMLScriptElement): void {
     }
     if (!anchor || !(anchor instanceof HTMLElement)) return null;
 
-    const cs = getComputedStyle(anchor);
-    if (cs.position === "static") {
-      anchor.style.position = "relative";
-    }
-
     const pin = document.createElement("span");
     pin.className = "af-vf-pin";
     if (row.status === "resolved") {
       pin.classList.add("af-vf-pin-resolved");
     }
     pin.dataset.afPinId = row.id;
+    pin.dataset.afFeedback = JSON.stringify(row);
     pin.textContent = String(index + 1);
     const x = row.coordinates?.x ?? 0.5;
     const y = row.coordinates?.y ?? 0.5;
-    pin.style.left = `${x * 100}%`;
-    pin.style.top = `${y * 100}%`;
+    const rect = anchor.getBoundingClientRect();
+    pin.style.left = `${window.scrollX + rect.left + x * rect.width}px`;
+    pin.style.top = `${window.scrollY + rect.top + y * rect.height}px`;
     pin.style.transform = "translate(-50%, -50%)";
-    anchor.appendChild(pin);
+    document.body.appendChild(pin);
     return pin;
   }
 
@@ -555,12 +553,21 @@ export function mountWidget(script: HTMLScriptElement): void {
     if (focusId && mode) focusPin(focusId);
     for (const row of rows) {
       if (detailCache.has(row.id) || inflightDetail.has(row.id)) continue;
-      const p = fetchFeedbackDetail(cfg, row.id)
+      const p = Promise.all([
+        fetchFeedbackDetail(cfg, row.id),
+        fetchFeedbackComments(cfg, row.id),
+      ])
         .then((data) => {
-          if (data) {
-            detailCache.set(row.id, data);
+          const [detail, comments] = data;
+          if (detail) {
+            const merged = {
+              feedback: detail.feedback,
+              comments: comments.length > 0 ? comments : detail.comments,
+            };
+            detailCache.set(row.id, merged);
+            return merged;
           }
-          return data;
+          return null;
         })
         .finally(() => {
           inflightDetail.delete(row.id);
@@ -653,7 +660,10 @@ export function mountWidget(script: HTMLScriptElement): void {
     detailOriginal.appendChild(wrap);
   }
 
-  async function openDetailModal(id: string): Promise<void> {
+  async function openDetailModal(
+    id: string,
+    fallbackRow: FeedbackRow | null = null,
+  ): Promise<void> {
     detailFeedbackId = id;
     const requestId = id;
     setHidden(detailErr, true);
@@ -668,7 +678,7 @@ export function mountWidget(script: HTMLScriptElement): void {
     setReplyComposerOpen(false);
     openBackdrop(detailBackdrop);
 
-    const quick = rows.find((row) => row.id === id);
+    const quick = rows.find((row) => row.id === id) ?? fallbackRow;
     if (quick) {
       detailStatus.innerHTML = statusBadgeHtml(quick.status);
       renderOriginalCard(quick.author, quick.comment_text, quick.image_urls ?? []);
@@ -693,16 +703,32 @@ export function mountWidget(script: HTMLScriptElement): void {
     }
 
     const pending = inflightDetail.get(id);
-    const data = pending ? await pending : await fetchFeedbackDetail(cfg, id);
+    const data = pending
+      ? await pending
+      : await Promise.all([
+          fetchFeedbackDetail(cfg, id),
+          fetchFeedbackComments(cfg, id),
+        ]).then(([detail, comments]) =>
+          detail
+            ? {
+                feedback: detail.feedback,
+                comments: comments.length > 0 ? comments : detail.comments,
+              }
+            : null,
+        );
     if (detailFeedbackId !== requestId) return;
     if (!data) {
-      detailErr.textContent = "Could not refresh thread.";
-      setHidden(detailErr, false);
+      if (!quick) {
+        detailErr.textContent = "Could not refresh thread.";
+        setHidden(detailErr, false);
+      }
       return;
     }
-    detailCache.set(id, data);
 
-    const { feedback: fb, comments } = data;
+    const previousComments = detailCache.get(id)?.comments ?? [];
+    const comments = data.comments.length > 0 ? data.comments : previousComments;
+    const fb = data.feedback;
+    detailCache.set(id, { feedback: fb, comments });
     detailStatus.innerHTML = statusBadgeHtml(fb.status);
     renderOriginalCard(fb.author, fb.comment_text, fb.image_urls ?? []);
 
@@ -864,13 +890,23 @@ export function mountWidget(script: HTMLScriptElement): void {
       setHidden(detailErr, false);
       return;
     }
+    const cached = detailCache.get(detailFeedbackId);
+    const fallbackFeedback =
+      cached?.feedback ?? rows.find((row) => row.id === detailFeedbackId);
+    if (fallbackFeedback && result.comment) {
+      const comments = [...(cached?.comments ?? []), result.comment];
+      detailCache.set(detailFeedbackId, {
+        feedback: fallbackFeedback,
+        comments,
+      });
+      renderThreadEl(comments);
+    }
     threadBodyInput.value = "";
     threadAuthorSelect.value = "Client";
     pendingThreadFiles = [];
     threadFilesInput.value = "";
     refreshThreadFilesPreview();
     setReplyComposerOpen(false);
-    await openDetailModal(detailFeedbackId);
     await loadPins();
   });
 
@@ -919,7 +955,16 @@ export function mountWidget(script: HTMLScriptElement): void {
     if (pinEl instanceof HTMLElement && pinEl.dataset.afPinId) {
       ev.preventDefault();
       ev.stopPropagation();
-      void openDetailModal(pinEl.dataset.afPinId);
+      let fallbackRow: FeedbackRow | null = null;
+      const rawFeedback = pinEl.dataset.afFeedback;
+      if (rawFeedback) {
+        try {
+          fallbackRow = JSON.parse(rawFeedback) as FeedbackRow;
+        } catch {
+          fallbackRow = null;
+        }
+      }
+      void openDetailModal(pinEl.dataset.afPinId, fallbackRow);
       return;
     }
 

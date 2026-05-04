@@ -8,11 +8,11 @@ if (!defined('ABSPATH')) {
  * GitHub auto-updater for Agency Feedback WP.
  *
  * How it works:
- *  1. On WordPress's periodic update check, we query the GitHub Releases API
- *     for the latest release on `lynesslim/visual-feedback-plugin`.
- *  2. If the latest release tag is newer than the installed version we inject
+ *  1. On WordPress's periodic update check, we query the GitHub Tags API
+ *     for the latest tag on `lynesslim/visual-feedback-plugin`.
+ *  2. If the latest tag version is newer than the installed version we inject
  *     an update object so WordPress shows the "Update now" button.
- *  3. On install/update WordPress downloads the release zip directly from GitHub.
+ *  3. On install/update WordPress downloads the source zip from GitHub.
  *  4. Because the zip root folder name may not match the installed plugin folder,
  *     we hook `upgrader_source_selection` to rename it correctly.
  */
@@ -20,7 +20,7 @@ final class AFWP_Updater
 {
     private const GITHUB_REPO    = 'lynesslim/visual-feedback-plugin';
     private const PLUGIN_SLUG    = 'agency-feedback-wp/agency-feedback-wp.php';
-    private const TRANSIENT_KEY  = 'afwp_github_release';
+    private const TRANSIENT_KEY  = 'afwp_github_tag';
     private const CACHE_SECONDS  = 12 * HOUR_IN_SECONDS;
 
     public function hooks(): void
@@ -39,12 +39,12 @@ final class AFWP_Updater
             return $transient;
         }
 
-        $release = $this->get_latest_release();
-        if (!$release) {
+        $tag = $this->get_latest_tag();
+        if (!$tag) {
             return $transient;
         }
 
-        $latest_version = ltrim((string)($release['tag_name'] ?? ''), 'v');
+        $latest_version = ltrim((string)($tag['name'] ?? ''), 'v');
 
         if (version_compare($latest_version, AFWP_VERSION, '>')) {
             $transient->response[self::PLUGIN_SLUG] = (object)[
@@ -52,7 +52,7 @@ final class AFWP_Updater
                 'plugin'      => self::PLUGIN_SLUG,
                 'new_version' => $latest_version,
                 'url'         => 'https://github.com/' . self::GITHUB_REPO,
-                'package'     => $release['zipball_url'] ?? '',
+                'package'     => 'https://api.github.com/repos/' . self::GITHUB_REPO . '/zipball/' . ($tag['name'] ?? ''),
                 'icons'       => [],
                 'banners'     => [],
                 'tested'      => '6.8',
@@ -75,12 +75,12 @@ final class AFWP_Updater
             return $result;
         }
 
-        $release = $this->get_latest_release();
-        if (!$release) {
+        $tag = $this->get_latest_tag();
+        if (!$tag) {
             return $result;
         }
 
-        $latest_version = ltrim((string)($release['tag_name'] ?? ''), 'v');
+        $latest_version = ltrim((string)($tag['name'] ?? ''), 'v');
 
         return (object)[
             'name'          => 'Agency Feedback WP',
@@ -90,12 +90,12 @@ final class AFWP_Updater
             'homepage'      => 'https://github.com/' . self::GITHUB_REPO,
             'requires_php'  => '8.0',
             'tested'        => '6.8',
-            'download_link' => $release['zipball_url'] ?? '',
+            'download_link' => 'https://api.github.com/repos/' . self::GITHUB_REPO . '/zipball/' . ($tag['name'] ?? ''),
             'sections'      => [
                 'description' => 'Visual feedback widget powered by Supercraft.',
-                'changelog'   => nl2br(esc_html((string)($release['body'] ?? 'See GitHub for release notes.'))),
+                'changelog'   => 'See GitHub for release notes.',
             ],
-            'last_updated'  => $release['published_at'] ?? '',
+            'last_updated'  => $tag['commit']['author']['date'] ?? '',
         ];
     }
 
@@ -128,14 +128,14 @@ final class AFWP_Updater
     // -------------------------------------------------------------------------
     // GitHub API helper
     // -------------------------------------------------------------------------
-    private function get_latest_release(): array|false
+    private function get_latest_tag(): array|false
     {
         $cached = get_transient(self::TRANSIENT_KEY);
         if (is_array($cached)) {
             return $cached;
         }
 
-        $url      = 'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/latest';
+        $url      = 'https://api.github.com/repos/' . self::GITHUB_REPO . '/tags?per_page=1';
         $response = wp_remote_get($url, [
             'timeout' => 10,
             'headers' => [
@@ -156,11 +156,11 @@ final class AFWP_Updater
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
-        if (!is_array($data) || empty($data['tag_name'])) {
+        if (!is_array($data) || empty($data[0]['name'])) {
             return false;
         }
 
-        set_transient(self::TRANSIENT_KEY, $data, self::CACHE_SECONDS);
-        return $data;
+        set_transient(self::TRANSIENT_KEY, $data[0], self::CACHE_SECONDS);
+        return $data[0];
     }
 }

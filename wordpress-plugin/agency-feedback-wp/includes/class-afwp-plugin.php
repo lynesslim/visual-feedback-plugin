@@ -29,11 +29,17 @@ final class AFWP_Plugin
         if (empty($cfg['embed_public_key'])) {
             return;
         }
+        $asset_path = AFWP_DIR . 'assets/js/agency-feedback.js';
+        $asset_version = AFWP_VERSION;
+        if (is_readable($asset_path)) {
+            $asset_version .= '-' . (string)filemtime($asset_path);
+        }
+
         wp_register_script(
             'agency-feedback-widget',
             AFWP_URL . 'assets/js/agency-feedback.js',
             [],
-            AFWP_VERSION,
+            $asset_version,
             true
         );
         wp_enqueue_script('agency-feedback-widget');
@@ -51,15 +57,13 @@ final class AFWP_Plugin
         if ($handle !== 'agency-feedback-widget') {
             return $tag;
         }
-        $cfg    = AFWP_Settings::get();
-        $apiUrl = untrailingslashit(AFWP_Settings::API_BASE) . '/api/feedback';
-        $attrs  = sprintf(
+        $cfg = AFWP_Settings::get();
+        $attrs = sprintf(
             ' src="%s" data-key="%s" data-api="%s" defer',
             esc_url($src),
             esc_attr((string)$cfg['embed_public_key']),
-            esc_attr($apiUrl)
+            esc_url('https://superapp.supercraft.my/api/public/feedback')
         );
         return '<script' . $attrs . '></script>';
     }
 }
-

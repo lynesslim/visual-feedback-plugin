@@ -56,7 +56,32 @@ final class AFWP_Settings
         $current = self::get();
         $next = $current;
         $next['enabled'] = !empty($input['enabled']) ? 1 : 0;
-        $next['embed_public_key'] = sanitize_text_field((string)($input['embed_public_key'] ?? ''));
+        $embed_key = sanitize_text_field((string)($input['embed_public_key'] ?? ''));
+
+        if ($embed_key !== '') {
+            $response = wp_remote_get(
+                'https://superapp.supercraft.my/api/public/feedback?embed_key=' . urlencode($embed_key) . '&includeResolved=1',
+                [
+                    'timeout' => 15,
+                    'headers' => ['Accept' => 'application/json'],
+                ]
+            );
+
+            if (is_wp_error($response)) {
+                add_settings_error(self::OPTION_KEY, 'api_error', 'Could not validate embed key. Please try again.', 'error');
+                $next['embed_public_key'] = $current['embed_public_key'];
+            } else {
+                $code = wp_remote_retrieve_response_code($response);
+                if ($code >= 400) {
+                    add_settings_error(self::OPTION_KEY, 'invalid_key', 'Invalid embed key. Please check and try again.', 'error');
+                    $next['embed_public_key'] = $current['embed_public_key'];
+                } else {
+                    $next['embed_public_key'] = $embed_key;
+                }
+            }
+        } else {
+            $next['embed_public_key'] = '';
+        }
 
         return $next;
     }
@@ -67,10 +92,19 @@ final class AFWP_Settings
             return;
         }
         $settings = self::get();
+        $has_key = !empty($settings['embed_public_key']);
         ?>
         <div class="wrap">
           <h1>Agency Feedback</h1>
-          <p>Configure widget and Supabase credentials.</p>
+          <?php if (!$has_key): ?>
+            <div class="notice notice-warning">
+              <p><strong>Widget disabled:</strong> Enter and validate an embed public key to enable the feedback widget on your site.</p>
+            </div>
+          <?php else: ?>
+            <div class="notice notice-success">
+              <p><strong>Widget enabled:</strong> The feedback widget is active on your site.</p>
+            </div>
+          <?php endif; ?>
           <?php settings_errors(self::OPTION_KEY); ?>
           <form method="post" action="options.php">
             <?php settings_fields('afwp_settings_group'); ?>
@@ -84,29 +118,18 @@ final class AFWP_Settings
                   </label>
                 </td>
               </tr>
-              <tr>
-                <th scope="row"><label for="afwp_supabase_url">Supabase URL</label></th>
-                <td><input class="regular-text" id="afwp_supabase_url" type="url" name="<?php echo esc_attr(self::OPTION_KEY); ?>[supabase_url]" value="<?php echo esc_attr((string)$settings['supabase_url']); ?>" /></td>
-              </tr>
-              <tr>
-                <th scope="row"><label for="afwp_service_role_key">Service role key</label></th>
-                <td>
-                  <input class="regular-text" id="afwp_service_role_key" type="password" placeholder="<?php echo $settings['service_role_key'] ? 'Stored (leave blank to keep)' : ''; ?>" name="<?php echo esc_attr(self::OPTION_KEY); ?>[service_role_key]" value="" />
-                </td>
-              </tr>
-              <tr>
-                <th scope="row"><label for="afwp_project_slug">Project slug</label></th>
-                <td><input class="regular-text" id="afwp_project_slug" type="text" name="<?php echo esc_attr(self::OPTION_KEY); ?>[project_slug]" value="<?php echo esc_attr((string)$settings['project_slug']); ?>" /></td>
-              </tr>
+              
               <tr>
                 <th scope="row"><label for="afwp_embed_public_key">Embed public key</label></th>
-                <td><input class="regular-text" id="afwp_embed_public_key" type="text" name="<?php echo esc_attr(self::OPTION_KEY); ?>[embed_public_key]" value="<?php echo esc_attr((string)$settings['embed_public_key']); ?>" /></td>
-              </tr>
-              <tr>
-                <th scope="row"><label for="afwp_feedback_passcode">Set feedback passcode</label></th>
                 <td>
-                  <input class="small-text" id="afwp_feedback_passcode" type="text" maxlength="4" pattern="\d{4}" name="<?php echo esc_attr(self::OPTION_KEY); ?>[feedback_passcode]" value="" />
-                  <p class="description">Optional. Enter 4 digits to update in Supabase.</p>
+                  <?php if ($has_key): ?>
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                      <input class="regular-text" id="afwp_embed_public_key" type="text" value="<?php echo esc_attr((string)$settings['embed_public_key']); ?>" readonly style="background: #f0f0f1; color: #646970;" />
+                      <span style="color: #2e7d32; font-weight: bold;">✓ Validated</span>
+                    </span>
+                  <?php else: ?>
+                    <input class="regular-text" id="afwp_embed_public_key" type="text" name="<?php echo esc_attr(self::OPTION_KEY); ?>[embed_public_key]" value="" placeholder="Enter embed public key" />
+                  <?php endif; ?>
                 </td>
               </tr>
             </table>

@@ -10,12 +10,12 @@ function nthOfTypeSegments(fromAncestor: Element, toDescendant: Element): string
   let current: Element | null = toDescendant;
 
   while (current && current !== fromAncestor) {
-    const parentEl = current.parentElement;
+    const parentEl: Element | null = current.parentElement;
     if (!parentEl) return [];
 
     const tag = current.tagName.toLowerCase();
     const self = current;
-    const sameTagSiblings = Array.from(parentEl.children).filter(
+    const sameTagSiblings = Array.from(parentEl.children as HTMLCollectionOf<Element>).filter(
       (c) => c.tagName === self.tagName,
     );
     const index = sameTagSiblings.indexOf(self) + 1;
@@ -54,7 +54,7 @@ function bodyRelativePath(el: Element): string {
     if (!parentEl) break;
 
     const self = current;
-    const sameTagSiblings = Array.from(parentEl.children).filter(
+    const sameTagSiblings = Array.from(parentEl.children as HTMLCollectionOf<Element>).filter(
       (c) => c.tagName === self.tagName,
     );
     const index = sameTagSiblings.indexOf(self) + 1;
